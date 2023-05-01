@@ -50,7 +50,7 @@ hist_data = client.get_historical_data('TSLA', period='1h', start='2020-01-02', 
 
 ## Licence
 ***
-© 2021 Nicolas Thiery
+© 2023 Nicolas Thiery
 
 This repository is licensed under the MIT license See LICENSE for details.
 
