@@ -5,8 +5,8 @@ import sys
 import urllib
 import urllib3
 import pandas as pd
-from src.fmpy import urls
-from src.fmpy import utils
+from fmpy import urls
+from fmpy import utils
 from datetime import datetime, timedelta
 
 
