@@ -14,7 +14,7 @@ $ pip install fmpy
 ## Usage
 ***
 To begin, you need to create an FmpClient object by passing your API key (provided by FMP) as parameter:
-```
+```python
 import fmpy as fp
 
 client = FmpClient(api_key="YOU_API_KEY")
@@ -30,7 +30,7 @@ FmpClient can be initialised with other parameters:
     request_retry: number of request retries before abording (5 by default)
 
 Here is an example:
-```
+```python
 import fmpy as fp
 
 client = FmpClient(api_key="YOU_API_KEY", rate_limit=750, timeout=20, request_retry=1)
@@ -39,7 +39,7 @@ client = FmpClient(api_key="YOU_API_KEY", rate_limit=750, timeout=20, request_re
 ```
 
 ## Historical data
-```
+```python
 import fmpy as fp
 
 client = FmpClient(api_key="YOU_API_KEY")
