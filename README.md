@@ -8,14 +8,14 @@ For more information on subscription plans and obtaining an API key, please visi
 ***
 Install fmpy using the pip command:
 ```
-$ pip install fmpy
+$ pip install fmpy_qi
 ```
 
 ## Usage
 ***
 To begin, you need to create an FmpClient object by passing your API key (provided by FMP) as parameter:
 ```python
-import fmpy as fp
+from fmpy.client import FmpClient
 
 client = FmpClient(api_key="YOU_API_KEY")
 ```
@@ -31,7 +31,7 @@ FmpClient can be initialised with other parameters:
 
 Here is an example:
 ```python
-import fmpy as fp
+from fmpy.client import FmpClient
 
 client = FmpClient(api_key="YOU_API_KEY", rate_limit=750, timeout=20, request_retry=1)
 # Will not make more than 750 requests per minute, 
@@ -40,7 +40,7 @@ client = FmpClient(api_key="YOU_API_KEY", rate_limit=750, timeout=20, request_re
 
 ## Historical data
 ```python
-import fmpy as fp
+from fmpy.client import FmpClient
 
 client = FmpClient(api_key="YOU_API_KEY")
 hist_data = client.get_historical_data('TSLA', period='1h', start='2020-01-02', end='2022-06-25')
