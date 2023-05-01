@@ -35,14 +35,13 @@ class FmpClient:
         self.session.mount('https://', adapter)
         self.session.headers.update(headers)
 
-        if self.api_key is None and 'FMP_API_KEY' in os.environ.keys():
+        if self.api_key is None and os.environ.get('FMP_API_KEY'):
             self.api_key = os.environ['FMP_API_KEY']
-
-        if self.api_key:
-            self.session.params.update({"apikey": self.api_key})
-        else:
+        elif not self.api_key:
             print('API KEY is empty !')
             sys.exit()
+
+        self.session.params.update({"apikey": self.api_key})
 
     def disconnect(self):
         if self.session:
