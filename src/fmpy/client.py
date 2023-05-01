@@ -1,12 +1,12 @@
 import requests
 import os
 import time
-import urls
 import sys
 import urllib
 import urllib3
-import utils
 import pandas as pd
+from src.fmpy import urls
+from src.fmpy import utils
 from datetime import datetime, timedelta
 
 
@@ -168,6 +168,7 @@ class FmpClient:
         _end = end
         batch_data = []
         end_date = None
+        prev_start = None
         while True:
             url = self._get_historical_url(symbol, period, start, _end)
             data = self._request(url)
@@ -177,9 +178,10 @@ class FmpClient:
             batch_data = sanitize_data + batch_data
             end_date = new_start
             new_start_datetime = datetime.strptime(new_start, '%Y-%m-%d')
-            if new_start_datetime <= target_start_datetime:
+            if new_start_datetime <= target_start_datetime or prev_start == new_start:
                 break
             _end = new_start
+            prev_start = new_start
         return batch_data
 
     def _convert_raw_data_to_df(self, raw_data):
