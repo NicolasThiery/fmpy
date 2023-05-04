@@ -171,6 +171,8 @@ class FmpClient:
         while True:
             url = self._get_historical_url(symbol, period, start, _end)
             data = self._request(url)
+            if not data:
+                return None
             data_list = data if isinstance(data, list) else data['historical']
             new_start = datetime.strftime(datetime.strptime(data_list[-1]['date'].split(' ')[0], '%Y-%m-%d') - timedelta(days=3), '%Y-%m-%d')
             sanitize_data = utils.limit_data_list(data_list, date_target=new_start, end_target=end_date)
@@ -189,6 +191,7 @@ class FmpClient:
             for key, value in data.items():
                 data_dict[key].append(value)
         df = pd.DataFrame.from_dict(data_dict)
+        df = df.iloc[::-1]
         return df.set_index('date')
 
     def download_historical_data_to_excel(self, symbol, file, period='1d', start=None, end=None, sheet_name=None):
