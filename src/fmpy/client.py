@@ -886,3 +886,44 @@ class FmpClient:
         """
         return self._request(f'{urls.MERGES_ACQUISITIONS_SEARCH}?'
                              f'{urllib.parse.urlencode(self.make_params({"name": name}))}')
+
+    ##### STOCK LIST #####
+
+    def get_stock_list(self):
+        """
+        Description
+        ----
+        Return all companies ticker symbols available in FMP
+
+        Output
+        ----
+        symbol_list (list)
+            List the all the available stock
+        """
+        return self._request(f'{urls.STOCK_LIST}')
+
+    def get_tradable_stock_list(self):
+        """
+        Description
+        ----
+        Return all tradable ticker symbols
+
+        Output
+        ----
+        symbol_list (list)
+            List the all the tradable stock
+        """
+        return self._request(f'{urls.TRADABLE_SYMBOL_LIST}')
+
+    def get_etf_list(self):
+        """
+        Description
+        ----
+        Return all ETF symbols available in FMP
+
+        Output
+        ----
+        symbol_list (list)
+            List the all the available etf
+        """
+        return self._request(f'{urls.ETF_LIST}')
