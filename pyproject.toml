@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fmpy_qi"
-version = "0.1.4"
+version = "0.1.5"
 authors = [
   { name="Nicolas THIERY", email="nicles.thiery@gmail.com" },
 ]
