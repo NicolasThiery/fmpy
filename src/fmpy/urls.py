@@ -41,7 +41,7 @@ RATING = f'{API_V3_URL}/rating'
 HISTORICAL_RATING = f'{API_V3_URL}/historical-rating'
 DISCOUNTED_CASH_FLOW = f'{API_V3_URL}/discounted-cash-flow'
 ADVANCED_DISCOUNTED_CASH_FLOW = f'{API_V4_URL}/advanced_discounted_cash_flow'
-ADVANCED_LEVERED_DISCOUNTED_CASH_FLOW = f'{API_V3_URL}/advanced_levered_discounted_cash_flow'
+ADVANCED_LEVERED_DISCOUNTED_CASH_FLOW = f'{API_V4_URL}/advanced_levered_discounted_cash_flow'
 HISTORICAL_DISCOUNTED_CASH_FLOW_STATEMENT = f'{API_V3_URL}/historical-discounted-cash-flow-statement'
 HISTORICAL_DAILY_DISCOUNTED_CASH_FLOW = f'{API_V3_URL}/historical-daily-discounted-cash-flow'
 

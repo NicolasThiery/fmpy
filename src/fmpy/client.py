@@ -63,6 +63,9 @@ class FmpClient:
         request.raise_for_status()
         return request.json()
 
+    def make_params(self, parmas_dict):
+        return {key: val for key, val in parmas_dict.items() if val}
+
     def get_symbol_info(self, symbol):
         """
         Description
@@ -500,4 +503,263 @@ class FmpClient:
         params = {key: val for key, val in {'symbol': symbol}.items() if val}
         return self._request(f'{urls.COMPANY_DUE}?{urllib.parse.urlencode(params)}')
 
-    ##### STOCK STATISTICS #####
+    ##### STOCK FUNDAMENTALS ANALYSIS #####
+
+    def get_ttm_ratios(self, symbol):
+        """
+        Description
+        ----
+        Return the company TTM ratios (liquidity Measurement Ratios, Profitability Indicator Ratios, Debt Ratios,
+        Operating Performance Ratios, Cash Flow Indicator Ratios and Investment Valuation Ratios).
+        For more detail on the formulas go to https://site.financialmodelingprep.com/developer/docs/formula
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company TTM ratios
+        """
+        return self._request(f'{urls.RATIOS_TTM}/{symbol}')
+
+    def get_ratios(self, symbol, period=None, limit=None):
+        """
+        Description
+        ----
+        Return the company ratios.
+        For more detail on the formulas go to https://site.financialmodelingprep.com/developer/docs/formula
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company ratios
+        """
+        return self._request(f'{urls.RATIOS}/{symbol}?'
+                             f'{urllib.parse.urlencode(self.make_params({"period": period, "limit": limit}))}')
+
+    def get_score(self, symbol):
+        """
+        Description
+        ----
+        Return the company's Piotroski score.
+        For more detail on the Piotroski score go to https://site.financialmodelingprep.com/developer/docs/piotroski-score
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company Piotroski score
+        """
+        return self._request(f'{urls.SCORE}/{symbol}')
+
+    def get_owner_earning(self, symbol):
+        """
+        Description
+        ----
+        Return the company's owner earning
+        For more detail on the owner earning go to https://site.financialmodelingprep.com/developer/docs/owner-earnings
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company owner earning
+        """
+        return self._request(f'{urls.SCORE}/{symbol}')
+
+    def get_enterprise_value(self, symbol, period=None, limit=None):
+        """
+        Description
+        ----
+        Return the annual enterprise value.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested enterprise value
+        """
+        return self._request(f'{urls.ENTERPRISE_VALUES}/{symbol}?'
+                             f'{urllib.parse.urlencode(self.make_params({"period": period, "limit": limit}))}')
+
+    def get_income_statement_growth(self, symbol, limit=None):
+        """
+        Description
+        ----
+        Return the company income statement growth
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company income statement growth
+        """
+        return self._request(f'{urls.INCOME_STATEMENT_GROWTH}/{symbol}?'
+                             f'{urllib.parse.urlencode(self.make_params({"limit": limit}))}')
+
+    def get_balance_sheet_growth(self, symbol, limit=None):
+        """
+        Description
+        ----
+        Return the company balance sheet growth
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company balance sheet growth
+        """
+        return self._request(f'{urls.BALANCE_SHEET_STATEMENT_GROWTH}/{symbol}?'
+                             f'{urllib.parse.urlencode(self.make_params({"limit": limit}))}')
+
+    def get_cash_flow_growth(self, symbol, limit=None):
+        """
+        Description
+        ----
+        Return the company cash flow growth
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company cash flow growth
+        """
+        return self._request(f'{urls.CASH_FLOW_STATEMENT_GROWTH}/{symbol}?'
+                             f'{urllib.parse.urlencode(self.make_params({"limit": limit}))}')
+
+    def get_ttm_key_metrics(self, symbol, limit=None):
+        """
+        Description
+        ----
+        Return the company TTM key metrics
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company TTM key metrics
+        """
+        return self._request(f'{urls.KEY_METRICS_TTM}/{symbol}?'
+                             f'{urllib.parse.urlencode(self.make_params({"limit": limit}))}')
+
+    def get_key_metrics(self, symbol, period=None, limit=None):
+        """
+        Description
+        ----
+        Return the company key metrics
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company key metrics
+        """
+        return self._request(f'{urls.KEY_METRICS}/{symbol}?'
+                             f'{urllib.parse.urlencode(self.make_params({"period": period, "limit": limit}))}')
+
+    def get_financial_growth(self, symbol, period=None, limit=None):
+        """
+        Description
+        ----
+        Return the company financial growth
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company financial growth
+        """
+        return self._request(f'{urls.FINANCIAL_GROWTH}/{symbol}?'
+                             f'{urllib.parse.urlencode(self.make_params({"period": period, "limit": limit}))}')
+
+    def get_company_rating(self, symbol):
+        """
+        Description
+        ----
+        Return the company rating
+        For more detail on the companies rating calculation go to https://site.financialmodelingprep.com/developer/docs/recommendations-formula
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company rating
+        """
+        return self._request(f'{urls.RATING}/{symbol}')
+
+    def get_companies_historical_rating(self, symbol, limit=None):
+        """
+        Description
+        ----
+        Return the company historical rating
+        For more detail on the companies rating calculation go to https://site.financialmodelingprep.com/developer/docs/recommendations-formula
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company historical rating
+        """
+        return self._request(f'{urls.HISTORICAL_RATING}/{symbol}?'
+                             f'{urllib.parse.urlencode(self.make_params({"limit": limit}))}')
+
+    def get_dcf(self, symbol):
+        """
+        Description
+        ----
+        Return the company discounted cash flow value (intrinsic value)
+        For more detail on the companies discounted cash flow go to https://site.financialmodelingprep.com/developer/docs/dcf-formula
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company discounted cash flow
+        """
+        return self._request(f'{urls.DISCOUNTED_CASH_FLOW}/{symbol}')
+
+    def get_advanced_dcf(self, symbol):
+        """
+        Description
+        ----
+        Return the company advanced discounted cash flow value (intrinsic value)
+        For more detail on the companies discounted cash flow go to https://site.financialmodelingprep.com/developer/docs/dcf-formula
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company advanced discounted cash flow
+        """
+        return self._request(f'{urls.ADVANCED_DISCOUNTED_CASH_FLOW}?'
+                             f'{urllib.parse.urlencode(self.make_params({"symbol": symbol}))}')
+
+    def get_advanced_levered_dcf(self, symbol):
+        """
+        Description
+        ----
+        Return the company advanced levered discounted cash flow value (intrinsic value)
+        For more detail on the companies discounted cash flow go to https://site.financialmodelingprep.com/developer/docs/dcf-formula
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company advanced levered discounted cash flow
+        """
+        return self._request(f'{urls.ADVANCED_LEVERED_DISCOUNTED_CASH_FLOW}?'
+                             f'{urllib.parse.urlencode(self.make_params({"symbol": symbol}))}')
+
+    def get_historical_dcf(self, symbol, period=None, limit=None):
+        """
+        Description
+        ----
+        Return the company historical discounted cash flow value (intrinsic value)
+        For more detail on the companies discounted cash flow go to https://site.financialmodelingprep.com/developer/docs/dcf-formula
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company historical discounted cash flow
+        """
+        return self._request(f'{urls.HISTORICAL_DISCOUNTED_CASH_FLOW_STATEMENT}/{symbol}?'
+                             f'{urllib.parse.urlencode(self.make_params({"period": period, "limit": limit}))}')
+
+    def get_historical_daily_dcf(self, symbol, limit=None):
+        """
+        Description
+        ----
+        Return the company historical daily discounted cash flow value (intrinsic value)
+        For more detail on the companies discounted cash flow go to https://site.financialmodelingprep.com/developer/docs/dcf-formula
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company historical daily discounted cash flow
+        """
+        return self._request(f'{urls.HISTORICAL_DAILY_DISCOUNTED_CASH_FLOW}/{symbol}?'
+                             f'{urllib.parse.urlencode(self.make_params({"limit": limit}))}')
