@@ -43,8 +43,9 @@ client = FmpClient(api_key="YOU_API_KEY", rate_limit=750, timeout=20, request_re
 from fmpy.client import FmpClient
 
 client = FmpClient(api_key="YOU_API_KEY")
-hist_data = client.get_historical_data('TSLA', period='1h', start='2020-01-02', end='2022-06-25')
-# Retreive historical 1h candles for Tesla stock between 2020-01-02 and 2022-06-25
+hist_data = client.get_historical_data('TSLA', period='1h', start='2020-01-02 10:00:00', end='2022-06-25 15:00:00')
+# Retreive historical 1h candles for Tesla stock between 2020-01-02 10:00:00 and 2022-06-25 15:00:00
+# start and end support both "%Y-%m-%d %H:%M:%S" and "%Y-%m-%d" time formats
 ```
 
 
