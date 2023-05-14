@@ -64,7 +64,7 @@ class FmpClient:
         return request.json()
 
     def make_params(self, parmas_dict):
-        return {key: val for key, val in parmas_dict.items() if val}
+        return {key: val for key, val in parmas_dict.items() if val is not None}
 
     def get_symbol_info(self, symbol):
         """
@@ -763,3 +763,126 @@ class FmpClient:
         """
         return self._request(f'{urls.HISTORICAL_DAILY_DISCOUNTED_CASH_FLOW}/{symbol}?'
                              f'{urllib.parse.urlencode(self.make_params({"limit": limit}))}')
+
+    ##### STOCK STATISTICS #####
+
+    def get_historical_social_sentiment(self, symbol, page):
+        """
+        Description
+        ----
+        Return the historical Social Media sentiment for stock (time in UTC) (intrinsic value)
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company historical Social Media sentiment
+        """
+        return self._request(f'{urls.HISTORICAL_SOCIAL_SENTIMENT}?'
+                             f'{urllib.parse.urlencode(self.make_params({"symbol": symbol, "page": page}))}')
+
+    def get_trending_social_sentiment(self, type=None, source=None):
+        """
+        Description
+        ----
+        Return the Trending Social Media sentiment
+
+        Input
+        ----
+        type: type of sentiment ('bullish' or 'bearish')
+        source: source of the sentiment ('twitter' | 'stocktwits')
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the trending social sentiment
+        """
+        return self._request(f'{urls.TRENDING_SOCIAL_SENTIMENT}?'
+                             f'{urllib.parse.urlencode(self.make_params({"type": type, "source": source}))}')
+
+    def get_social_sentiment_biggest_changes(self, type, source):
+        """
+        Description
+        ----
+        Return the Biggest changes in the Social Media sentiment
+
+        Input
+        ----
+        type: type of sentiment ('bullish' or 'bearish')
+        source: source of the sentiment ('twitter' | 'stocktwits')
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the trending social sentiment
+        """
+        return self._request(f'{urls.CHANGES_SOCIAL_SENTIMENT}?'
+                             f'{urllib.parse.urlencode(self.make_params({"type": type, "source": source}))}')
+
+    def get_stock_grade(self, symbol, limit=None):
+        """
+        Description
+        ----
+        Return the analysts stock grade
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company stock grade from analysts
+        """
+        return self._request(f'{urls.STOCK_GRADE}/{symbol}?'
+                             f'{urllib.parse.urlencode(self.make_params({"limit": limit}))}')
+
+    def get_earning_surprises(self, symbol):
+        """
+        Description
+        ----
+        Return the company earning surprises
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested company earning surprises
+        """
+        return self._request(f'{urls.EARNING_SURPRISES}/{symbol}')
+
+    def get_analyst_estimates(self, symbol, period=None, limit=None):
+        """
+        Description
+        ----
+        Return the annual analyst estimates of a stock
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested stock analyst estimates
+        """
+        return self._request(f'{urls.ANALYST_ESTIMATES}/{symbol}?'
+                             f'{urllib.parse.urlencode(self.make_params({"period": period, "limit": limit}))}')
+
+    def get_merges_acquisitions_rss_feed(self, page):
+        """
+        Description
+        ----
+        Return the mergers and acquisitions rss feed
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested mergers and acquisitions rss feed
+        """
+        return self._request(f'{urls.MERGES_ACQUISITIONS_RSS_FEED}?'
+                             f'{urllib.parse.urlencode(self.make_params({"page": page}))}')
+
+    def search_merges_acquisitions(self, name):
+        """
+        Description
+        ----
+        Search the mergers and acquisitions by name
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the searched mergers and acquisitions
+        """
+        return self._request(f'{urls.MERGES_ACQUISITIONS_SEARCH}?'
+                             f'{urllib.parse.urlencode(self.make_params({"name": name}))}')
