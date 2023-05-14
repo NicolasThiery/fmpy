@@ -5,8 +5,8 @@ import sys
 import urllib
 import urllib3
 import pandas as pd
-from fmpy import urls
-from fmpy import utils
+from src.fmpy import urls
+from src.fmpy import utils
 from datetime import datetime, timedelta
 
 
@@ -145,11 +145,13 @@ class FmpClient:
         """
         if period not in self.allow_period:
             raise ValueError(f'{period} period is not allow (allowed periods are {",".join(self.allow_period)})')
-        for date in [start, end]:
+        _start = f'{start} 00:00:00' if len(start.split(' ')) == 1 else start
+        _end = f'{end} 00:00:00' if len(end.split(' ')) == 1 else end
+        for date in [_start, _end]:
             if date and not utils.is_valid_time_format(date):
                 raise ValueError(f'{date} as a wrong date format')
         formated_period = utils.format_period(period)
-        data = self._get_batch_historical_data(symbol, formated_period, start, end)
+        data = self._get_batch_historical_data(symbol, formated_period, _start, _end)
         if not data:
             return None
         elif get_raw_data:
@@ -163,26 +165,45 @@ class FmpClient:
                    f'{urls.HISTORICAL_CHART}/{period}/{symbol}?{urllib.parse.urlencode(params)}'
 
     def _get_batch_historical_data(self, symbol, period, start, end):
-        target_start_datetime = datetime.strptime(start, '%Y-%m-%d')
-        _end = end
+        sanitize_start = start.split(' ')[0]
+        sanitize_end = end.split(' ')[0]
+        target_start_datetime = datetime.strptime(sanitize_start, '%Y-%m-%d')
+        _end = sanitize_end
         batch_data = []
-        end_date = None
+        loop_index = 1
         prev_start = None
         while True:
-            url = self._get_historical_url(symbol, period, start, _end)
+            url = self._get_historical_url(symbol, period, sanitize_start, _end)
             data = self._request(url)
             if not data:
-                return None
+                if not batch_data:
+                    return None
+                else:
+                    return batch_data
             data_list = data if isinstance(data, list) else data['historical']
-            new_start = datetime.strftime(datetime.strptime(data_list[-1]['date'].split(' ')[0], '%Y-%m-%d') - timedelta(days=3), '%Y-%m-%d')
-            sanitize_data = utils.limit_data_list(data_list, date_target=new_start, end_target=end_date)
+            new_start = data_list[-1]['date'].split(' ')[0]
+            start_index = 0
+            end_index = len(data_list)-1
+            end_target_datetime = datetime.strptime(start, "%Y-%m-%d %H:%M:%S")
+            for i, item in enumerate(data_list):
+                date = f'{item["date"]} 00:00:00' if len(item['date'].split(' ')) == 1 else item["date"]
+                if loop_index == 1:
+                    start_target_datetime = datetime.strptime(end, "%Y-%m-%d %H:%M:%S")
+                    if datetime.strptime(date, "%Y-%m-%d %H:%M:%S") > start_target_datetime:
+                        start_index += 1
+                if end_target_datetime >= datetime.strptime(date, "%Y-%m-%d %H:%M:%S"):
+                    end_index = i + 1
+                    break
+                if item['date'].split(' ')[0] == new_start:
+                    end_index = i + 1
+            sanitize_data = data_list[start_index:end_index][::-1]
             batch_data = sanitize_data + batch_data
-            end_date = new_start
             new_start_datetime = datetime.strptime(new_start, '%Y-%m-%d')
             if new_start_datetime <= target_start_datetime or prev_start == new_start:
                 break
             _end = new_start
             prev_start = new_start
+            loop_index += 1
         return batch_data
 
     def _convert_raw_data_to_df(self, raw_data):
@@ -221,3 +242,259 @@ class FmpClient:
         df = self.get_historical_data(symbol, period=period, start=start, end=end, get_raw_data=False)
         df.to_excel(file, sheet_name=sheet_name)
 
+    ##### STOCK FUNDAMENTALS #####
+
+    def get_sec_filling(self, symbol, page=None, type=None):
+        """
+        Description
+        ----
+        Return the SEC filings.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested SEC filing
+        """
+        params = {key: val for key, val in {'page': page, 'type': type}.items() if val}
+        return self._request(f'{urls.SEC_FILLING}/{symbol}?{urllib.parse.urlencode(params)}')
+
+    def get_financial_statement_list(self):
+        """
+        Description
+        ----
+        Return a list of all the financial statement symbol available.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain all the available financial statement symbol
+        """
+        return self._request(f'{urls.FINANCIAL_STATEMENT_LIST}')
+
+    def get_income_statement(self, symbol, period=None, limit=None):
+        """
+        Description
+        ----
+        Return income statements for a given symbol.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested symbol income statement
+        """
+        params = {key: val for key, val in {'period': period, 'limit': limit}.items() if val}
+        return self._request(f'{urls.INCOME_STATEMENT}/{symbol}?{urllib.parse.urlencode(params)}')
+
+    def get_balance_sheet_statement(self, symbol, period=None, limit=None):
+        """
+        Description
+        ----
+        Return balance sheet statements for a given symbol.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested symbol balance sheet statement
+        """
+        params = {key: val for key, val in {'period': period, 'limit': limit}.items() if val}
+        return self._request(f'{urls.BALANCE_SHEET_STATEMENT}/{symbol}?{urllib.parse.urlencode(params)}')
+
+    def get_cash_flow_statement(self, symbol, period=None, limit=None):
+        """
+        Description
+        ----
+        Return cash flow statements for a given symbol.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested symbol cash flow statement
+        """
+        params = {key: val for key, val in {'period': period, 'limit': limit}.items() if val}
+        return self._request(f'{urls.CASH_FLOW_STATEMENT}/{symbol}?{urllib.parse.urlencode(params)}')
+
+    def get_income_statement_as_reported(self, symbol, period=None, limit=None):
+        """
+        Description
+        ----
+        Return as reported income statements for a given symbol.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested symbol income statement
+        """
+        params = {key: val for key, val in {'period': period, 'limit': limit}.items() if val}
+        return self._request(f'{urls.INCOME_STATEMENT_AS_REPORTED}/{symbol}?{urllib.parse.urlencode(params)}')
+
+    def get_balance_sheet_statement_as_reported(self, symbol, period=None, limit=None):
+        """
+        Description
+        ----
+        Return as reported balance sheet statements for a given symbol.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested symbol balance sheet statement
+        """
+        params = {key: val for key, val in {'period': period, 'limit': limit}.items() if val}
+        return self._request(f'{urls.BALANCE_SHEET_STATEMENT_AS_REPORTED}/{symbol}?{urllib.parse.urlencode(params)}')
+
+    def get_cash_flow_statement_as_reported(self, symbol, period=None, limit=None):
+        """
+        Description
+        ----
+        Return as reported income statements for a given symbol.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested symbol cash flow statement
+        """
+        params = {key: val for key, val in {'period': period, 'limit': limit}.items() if val}
+        return self._request(f'{urls.CASH_FLOW_STATEMENT_AS_REPORTED}/{symbol}?{urllib.parse.urlencode(params)}')
+
+    def get_financial_statement_as_reported(self, symbol, period=None):
+        """
+        Description
+        ----
+        Return as reported financial statements for a given symbol.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested symbol financial statement
+        """
+        params = {key: val for key, val in {'period': period}.items() if val}
+        return self._request(f'{urls.INCOME_STATEMENT_AS_REPORTED}/{symbol}?{urllib.parse.urlencode(params)}')
+
+    def get_financial_reports_dates(self, symbol):
+        """
+        Description
+        ----
+        Return all available dates for the requested symbol financial reports.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested symbol financial reports dates
+        """
+        return self._request(f'{urls.FINANCIAL_REPORTS_DATES}?symbol={symbol}')
+
+    def get_financial_reports_dates_json(self, symbol, year, period=None):
+        """
+        Description
+        ----
+        Return the Annual reports on Form 10-K in json format.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested symbol annual report
+        """
+        _period = 'FY' if not period else period
+        params = {key: val for key, val in {'symbol': symbol, 'year': year, 'period': _period}.items() if val}
+        return self._request(f'{urls.FINANCIAL_REPORT_JSON}?{urllib.parse.urlencode(params)}')
+
+    def get_shares_float(self, symbol):
+        """
+        Description
+        ----
+        Return the symbol shares float.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested symbol shares float
+        """
+        return self._request(f'{urls.SHARES_FLOAT}?symbol={symbol}')
+
+    def get_all_shares_float(self):
+        """
+        Description
+        ----
+        Return all availables shares float.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for all shares float availabale
+        """
+        return self._request(f'{urls.SHARES_FLOAT}/all')
+
+    def get_sec_rss_feeds(self, page=None, datatype=None, limit=None, type=None, start=None, end=None, isDone=None):
+        """
+        Description
+        ----
+        Return SEC RSS (Really Simple Syndication) feeds.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested SED RSS feeds
+        """
+        _isdone= str(isDone).lower() if isDone else None
+        params = {key: val for key, val in {'page': page, 'datatype': datatype, 'limit': limit,
+                                            'type': type, 'from':start, 'to': end, 'isDone': _isdone}.items() if val}
+        return self._request(f'{urls.RSS_FEED}?{urllib.parse.urlencode(params)}')
+
+    def get_earning_call_transcript(self, symbol, year=None, quarter=None):
+        """
+        Description
+        ----
+        Return the Earning call transcript for a given symbol.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested earning call transcript
+        """
+        params = {key: val for key, val in {'symbol': symbol, 'year': year, 'quarter': quarter}.items() if val}
+        return self._request(f'{urls.EARNING_CALL_TRANSCRIPT_V4}?{urllib.parse.urlencode(params)}')
+
+    def get_sec_filling(self, symbol, page=None, type=None):
+        """
+        Description
+        ----
+        Return the SEC filings.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested SEC filing
+        """
+        params = {key: val for key, val in {'page': page, 'type': type}.items() if val}
+        return self._request(f'{urls.SEC_FILLING}/{symbol}?{urllib.parse.urlencode(params)}')
+
+    def get_sec_rss_feed_8k(self, page=None, limit=None, start=None, end=None, hasFinancial=None):
+        """
+        Description
+        ----
+        Return SEC RSS (Really Simple Syndication) feeds 8K (important events).
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested SED RSS feeds 8K
+        """
+        _hasFinancial = str(hasFinancial).lower() if hasFinancial else None
+        params = {key: val for key, val in {'page': page, 'limit': limit, 'from': start,
+                                            'to': end, 'hasFinancial': _hasFinancial}.items() if val}
+        return self._request(f'{urls.RSS_FEED_8K}?{urllib.parse.urlencode(params)}')
+
+    def get_company_notes(self, symbol):
+        """
+        Description
+        ----
+        Return the list of notes due for a given symbol.
+
+        Output
+        ----
+        symbol_list (list)
+            List that contain the data dict info for the requested symbol notes due
+        """
+        params = {key: val for key, val in {'symbol': symbol}.items() if val}
+        return self._request(f'{urls.COMPANY_DUE}?{urllib.parse.urlencode(params)}')
+
+    ##### STOCK STATISTICS #####
