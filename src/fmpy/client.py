@@ -159,6 +159,18 @@ class FmpClient:
         else:
             return self._convert_raw_data_to_df(data)
 
+    @staticmethod
+    def _convert_raw_data_to_df(raw_data):
+        association_dict = {'Date': 'date', 'Open': 'open', 'High': 'high',
+                            'Low': 'low', 'Close': 'close', 'Volume': 'volume'}
+        data_dict = {item: [] for item in association_dict.keys()}
+        for data in raw_data[::-1]:
+            for item in association_dict.keys():
+                data_dict[item].append(data[association_dict[item]])
+        df = pd.DataFrame.from_dict(data_dict)
+        df = df.iloc[::-1]
+        return df.set_index('Date')
+
     def _get_historical_url(self, symbol, period, start, end):
         params = {key: val for key, val in {'from': start, 'to': end}.items() if val}
         return f'{urls.HISTORICAL_PRICE_FULL}/{symbol}?{urllib.parse.urlencode(params)}' if period == '1d' else\
@@ -205,15 +217,6 @@ class FmpClient:
             prev_start = new_start
             loop_index += 1
         return batch_data
-
-    def _convert_raw_data_to_df(self, raw_data):
-        data_dict = {item: [] for item in raw_data[0].keys()}
-        for data in raw_data[::-1]:
-            for key, value in data.items():
-                data_dict[key].append(value)
-        df = pd.DataFrame.from_dict(data_dict)
-        df = df.iloc[::-1]
-        return df.set_index('date')
 
     def download_historical_data_to_excel(self, symbol, file, period='1d', start=None, end=None, sheet_name=None):
         """
