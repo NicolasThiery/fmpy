@@ -6,13 +6,11 @@ import urllib
 import urllib3
 import pandas as pd
 from . import urls
-from .import utils
+from . import utils
 from datetime import datetime, timedelta
 
 
 class FmpClient:
-
-    rate_limit = 300
 
     def __init__(self, api_key=None, rate_limit=300, timeout=5, request_retry=5):
         self.api_key = api_key
@@ -122,7 +120,7 @@ class FmpClient:
             raise TypeError('symbols must be a list')
         return self._request(f'{urls.QUOTE}/{",".join(symbols)}')
 
-    def get_historical_data(self, symbol, period='1d', start=None, end=None, get_raw_data=False):
+    def get_historical_data(self, symbol, period='1d', start=None, end=None, get_raw_data=False, datetime_index=False):
         """
         Description
         ----
@@ -160,10 +158,10 @@ class FmpClient:
         elif get_raw_data:
             return data
         else:
-            return self._convert_raw_data_to_df(data)
+            return self._convert_raw_data_to_df(data, datetime_index)
 
     @staticmethod
-    def _convert_raw_data_to_df(raw_data):
+    def _convert_raw_data_to_df(raw_data, datetime_index):
         association_dict = {'Date': 'date', 'Open': 'open', 'High': 'high',
                             'Low': 'low', 'Close': 'close', 'Volume': 'volume'}
         data_dict = {item: [] for item in association_dict.keys()}
@@ -172,6 +170,8 @@ class FmpClient:
                 data_dict[item].append(data[association_dict[item]])
         df = pd.DataFrame.from_dict(data_dict)
         df = df.iloc[::-1]
+        if datetime_index:
+            df['Date'] = pd.to_datetime(df['Date'])
         return df.set_index('Date')
 
     def _get_historical_url(self, symbol, period, start, end):
@@ -191,12 +191,11 @@ class FmpClient:
             url = self._get_historical_url(symbol, period, sanitize_start, _end)
             data = self._request(url)
             if not data:
-                if not batch_data:
-                    return None
-                else:
-                    return batch_data
+                return batch_data
             data_list = data if isinstance(data, list) else data['historical']
             new_start = data_list[-1]['date'].split(' ')[0]
+            if prev_start == new_start:
+                break
             start_index = 0
             end_index = len(data_list)-1
             end_target_datetime = datetime.strptime(start, "%Y-%m-%d %H:%M:%S")
@@ -207,17 +206,17 @@ class FmpClient:
                     if datetime.strptime(date, "%Y-%m-%d %H:%M:%S") > start_target_datetime:
                         start_index += 1
                 if end_target_datetime >= datetime.strptime(date, "%Y-%m-%d %H:%M:%S"):
-                    end_index = i + 1
+                    end_index = i
                     break
                 if item['date'].split(' ')[0] == new_start:
                     end_index = i + 1
             sanitize_data = data_list[start_index:end_index][::-1]
             batch_data = sanitize_data + batch_data
             new_start_datetime = datetime.strptime(new_start, '%Y-%m-%d')
-            if new_start_datetime <= target_start_datetime or prev_start == new_start:
+            if new_start_datetime <= target_start_datetime:
                 break
-            _end = new_start
-            prev_start = new_start
+            _end = datetime.strftime(new_start_datetime - timedelta(days=1), "%Y-%m-%d")
+            prev_start = _end
             loop_index += 1
         return batch_data
 
@@ -927,3 +926,571 @@ class FmpClient:
             List the all the available etf
         """
         return self._request(f'{urls.ETF_LIST}')
+
+    # STOCK LOOK UP TOOL
+
+    def search(self, input, exchange=None, limit=None):
+        """
+        Description
+        ----
+        Search via ticker or company name
+
+        Input
+        ----
+        input (string)
+            Ticker or company name to search
+
+        exchange (string)
+            Name of the exchange to search on.
+            Valid exchange are :ETF | MUTUAL_FUND | COMMODITY | INDEX | CRYPTO |
+                                FOREX | TSX | AMEX | NASDAQ | NYSE | EURONEXT |
+                                XETRA | NSE | LSE
+
+        limit (integer)
+            Maximum number of results.
+
+        Output
+        ----
+        symbol_list (list)
+            List the all the available etf
+        """
+        return self._request(f'{urls.SEARCH}?'
+                             f'{urllib.parse.urlencode(self.make_params({"query": input, "echange": exchange,"limit":limit}))}')
+
+    def search_ticker(self, input, exchange=None, limit=None):
+        """
+        Description
+        ----
+        Search via ticker
+
+        Input
+        ----
+        input (string)
+            Ticker or company name to search
+
+        exchange (string)
+            Name of the exchange to search on.
+            Valid exchange are :ETF | MUTUAL_FUND | COMMODITY | INDEX | CRYPTO |
+                                FOREX | TSX | AMEX | NASDAQ | NYSE | EURONEXT |
+                                XETRA | NSE | LSE
+
+        limit (integer)
+            Maximum number of results.
+
+        Output
+        ----
+        symbol_list (list)
+            List the all the available etf
+        """
+        return self._request(f'{urls.SEARCH_TICKER}?'
+                             f'{urllib.parse.urlencode(self.make_params({"query": input, "echange": exchange,"limit":limit}))}')
+
+    def search_company(self, input, exchange=None, limit=None):
+        """
+        Description
+        ----
+        Search via company name
+
+        Input
+        ----
+        input (string)
+            Ticker or company name to search
+
+        exchange (string)
+            Name of the exchange to search on.
+            Valid exchange are :ETF | MUTUAL_FUND | COMMODITY | INDEX | CRYPTO |
+                                FOREX | TSX | AMEX | NASDAQ | NYSE | EURONEXT |
+                                XETRA | NSE | LSE
+
+        limit (integer)
+            Maximum number of results.
+
+        Output
+        ----
+        symbol_list (list)
+            List the all the available etf
+        """
+        return self._request(f'{urls.SEARCH_NAME}?'
+                             f'{urllib.parse.urlencode(self.make_params({"query": input, "echange": exchange,"limit":limit}))}')
+
+    # STOCK SCREENER
+
+    def stock_screener(self, marketCapMoreThan=None, marketCapLowerThan=None, priceMoreThan=None, priceLowerThan=None,
+                             betaMoreThan=None, betaLowerThan=None, volumeMoreThan=None, volumeLowerThan=None,
+                             dividendMoreThan=None, dividendLowerThan=None, isEtf=None, isActivelyTrading=None,
+                             sector=None, industry=None, country=None, exchange=None, limit=None):
+        """
+        Description
+        ----
+        Get the stock screener based on criterias.
+
+        Input
+        ----
+        marketCapMoreThan (integer)
+            Specify the minium marketCap of the stock screener.
+
+        marketCapLowerThan (integer)
+            Specify the maximum marketCap of the stock screener.
+
+        priceMoreThan (integer)
+            Specify the minimum price of the stock screener.
+
+        priceLowerThan (integer)
+            Specify the maximum price of the stock screener.
+
+        betaMoreThan (float)
+            Specify the minimum beta of the stock screener.
+
+        betaLowerThan (float)
+            Specify the maximum beta of the stock screener.
+
+        volumeMoreThan (integer)
+            Specify the minimum volume of the stock screener.
+
+        volumeLowerThan (integer)
+            Specify the maximum volume of the stock screener.
+
+        dividendMoreThan (float)
+            Specify the minimum dividend of the stock screener.
+
+        dividendLowerThan (float)
+            Specify the maximum dividend of the stock screener.
+
+        isEtf (bool)
+            Specify if all stock in the screener should be ETF
+
+        isActivelyTrading (bool)
+            Specify if all stock in the screener should be actively trading
+
+        sector (string)
+            Specify the sector of the stock screener.
+            Possible values are : Consumer Cyclical - Energy - Technology - Industrials -
+                                  Financial Services - Basic Materials - Communication Services -
+                                  Consumer Defensive - Healthcare - Real Estate - Utilities -
+                                  Industrial Goods - Financial - Services - Conglomerates
+
+        Industry (string)
+            Specify the industry of the stock screener
+            Possible values are : Autos - Banks - Banks Diversified - Software - Banks Regional -
+                                  Beverages Alcoholic - Beverages Brewers - Beverages Non-Alcoholic
+
+        Country (string)
+            Specify the stock's Country for the screener
+            Example : US - UK - MX - BR - RU - HK - CA
+
+        exchange (string)
+            Specify the exchange of the stock screener
+            Example : nyse - nasdaq - amex - euronext - tsx - etf - mutual_fund
+
+        limit (integer)
+            Maximum number of results in the stock screener.
+
+        Output
+        ----
+        symbol_list (list)
+            List the all the available etf
+        """
+        params = {key: val for key, val in {"marketCapMoreThan": marketCapMoreThan, "marketCapLowerThan": marketCapLowerThan,
+                                            "priceMoreThan": priceMoreThan, "priceLowerThan": priceLowerThan,
+                                            "betaMoreThan": betaMoreThan, "betaLowerThan": betaLowerThan,
+                                            "volumeMoreThan": volumeMoreThan, "volumeLowerThan": volumeLowerThan,
+                                            "dividendMoreThan": dividendMoreThan, "dividendLowerThan": dividendLowerThan,
+                                            "isEtf": isEtf, "isActivelyTrading": isActivelyTrading, "sector": sector,
+                                            "industry": industry, "country": country, "exchange": exchange, "limit": limit}.items() if val}
+        return self._request(f'{urls.STOCK_SCREENER}?'
+                             f'{urllib.parse.urlencode(params)}')
+
+    def get_all_countries(self):
+        """
+        Description
+        ----
+        Return all available countries
+
+        Output
+        ----
+        country_list (list)
+            List the all available countries
+        """
+        return self._request(f'{urls.GET_ALL_COUNTRIES}')
+
+    # COMPANY INFORMATION
+
+    def get_company_profile(self, symbol):
+        """
+        Description
+        ----
+        Return the company profile
+
+        Input
+        ----
+        symbol (string)
+            The symbol of the company
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing company profile data
+        """
+        return self._request(f'{urls.PROFILE}/{symbol}')
+
+    def get_company_key_executives(self, symbol):
+        """
+        Description
+        ----
+        Return the company key executives
+
+        Input
+        ----
+        symbol (string)
+            The symbol of the company
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing company key executive
+        """
+        return self._request(f'{urls.KEY_EXECUTIVES}/{symbol}')
+
+    def get_marketCap(self, symbol):
+        """
+        Description
+        ----
+        Return the market capitalization
+
+        Input
+        ----
+        symbol (string)
+            The symbol of the financial asset
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing market capitalization data
+        """
+        return self._request(f'{urls.MARKET_CAP}/{symbol}')
+
+    def get_historical_marketCap(self, symbol, limit=None):
+        """
+        Description
+        ----
+        Return the historical market capitalization
+
+        Input
+        ----
+        symbol (string)
+            The symbol of the financial asset
+
+        limit (integer)
+            Maximum number of historical market capitalization
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing historical market capitalization data
+        """
+        return self._request(f'{urls.HISTORICAL_MARKET_CAP}/{symbol}?'
+                             f'{urllib.parse.urlencode(self.make_params({"limit": limit}))}')
+
+    def get_company_outlook(self, symbol):
+        """
+        Description
+        ----
+        Return the company outlook
+
+        Input
+        ----
+        symbol (string)
+            The symbol of the financial asset
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing the company outlook data
+        """
+        return self._request(f'{urls.COMPANY_OUTLOOK}?'
+                             f'{urllib.parse.urlencode(self.make_params({"symbol": symbol}))}')
+
+    def get_stock_peers(self, symbol):
+        """
+        Description
+        ----
+        Return the stock peers based on sector, exchange and market capitalization
+
+        Input
+        ----
+        symbol (string)
+            The symbol of the financial asset
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing the stock peers
+        """
+        return self._request(f'{urls.STOCK_PEERS}?'
+                             f'{urllib.parse.urlencode(self.make_params({"symbol": symbol}))}')
+
+    def get_market_open(self):
+        """
+        Description
+        ----
+        Return NYSE Trading hours and Holidays
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing the NYSE Trading hours and Holidays
+        """
+        return self._request(f'{urls.IS_MARKET_OPEN}')
+
+    def get_delisted_companies(self, page=None):
+        """
+        Description
+        ----
+        Return the delisted companies
+
+        Input
+        ----
+        page (integer)
+            Number of the delisted companies page
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing the delisted companies
+        """
+        return self._request(f'{urls.DELISTED_COMPANIES}?'
+                             f'{urllib.parse.urlencode(self.make_params({"page": page}))}')
+
+    def get_symbol_changes(self):
+        """
+        Description
+        ----
+        Return the symbol that have been changed
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing all the symbol changed
+        """
+        return self._request(f'{urls.SYMBOL_CHANGE}')
+
+    def get_company_core_info(self, symbol):
+        """
+        Description
+        ----
+        Return the company core information
+
+        Input
+        ----
+        symbol (string)
+            The symbol of the company
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing the company core inforamtion
+        """
+        return self._request(f'{urls.COMPANY_CORE_INFO}?'
+                             f'{urllib.parse.urlencode(self.make_params({"symbol": symbol}))}')
+
+    # MARKET PERFORMANCE
+
+    def get_sectors_pe_ratio(self, date, exchange=None):
+        """
+        Description
+        ----
+        Return the price to earning ratio for all sectors
+
+        Input
+        ----
+        date (string)
+            PE date with format %Y-%m-%d
+
+        exchange (string)
+            name of the exchange
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing the sectors price to earning ratio
+        """
+        try:
+            datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError(f'{date} as a wrong date format')
+        else:
+            return self._request(f'{urls.SECTOR_PRICE_EARNING_RATIO}?'
+                                 f'{urllib.parse.urlencode(self.make_params({"date": date, "exchange": exchange}))}')
+
+    def get_industries_pe_ratio(self, date, exchange=None):
+        """
+        Description
+        ----
+        Return the price to earning ratio for all industries
+
+        Input
+        ----
+        date (string)
+            PE date with format %Y-%m-%d
+
+        exchange (string)
+            name of the exchange
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing the industries price to earning ratio
+        """
+        try:
+            datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError(f'{date} as a wrong date format')
+        else:
+            return self._request(f'{urls.INDUSTRY_PRICE_EARNING_RATIO}?'
+                                 f'{urllib.parse.urlencode(self.make_params({"date": date, "exchange": exchange}))}')
+
+    def get_sector_performance(self):
+        """
+        Description
+        ----
+        Return the performance sector by sector
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing all sector performance data
+        """
+        return self._request(f'{urls.SECTOR_PERFORMANCE}')
+
+    def get_historical_sector_performance(self, limit=None):
+        """
+        Description
+        ----
+        Return the historical sector performance sector
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing the historical sector performance data
+        """
+        return self._request(f'{urls.HISTORICAL_SECTOR_PERFORMANCE}?'
+                             f'{urllib.parse.urlencode(self.make_params({"limit": limit}))}')
+
+    def get_most_gainers(self):
+        """
+        Description
+        ----
+        Return the most gainer stock companies
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing the most gainer stock companies data
+        """
+        return self._request(f'{urls.MOST_GAINER_STOCK}')
+
+    def get_most_losers(self):
+        """
+        Description
+        ----
+        Return the most losers stock companies
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing the most losers stock companies data
+        """
+        return self._request(f'{urls.MOST_LOSER_STOCK}')
+
+    def get_most_actives(self):
+        """
+        Description
+        ----
+        Return the most actives stock companies
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing the most actives stock companies data
+        """
+        return self._request(f'{urls.MOST_ACTIVE_STOCK}')
+
+    # ECONOMICS
+
+    def get_market_risk_premium(self):
+        """
+        Description
+        ----
+        Return the market risk premium country by country
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing the market risk premium
+        """
+        return self._request(f'{urls.MARKET_RISK_PREMIUM}')
+
+    def get_historical_treasury_rates(self, start=None, end=None):
+        """
+        Description
+        ----
+        Return the historical treasury rate (wihtin a maximum interval of 3 months)
+
+        Input
+        ----
+        start (string)
+            start date with format %Y-%m-%d
+
+        end (string)
+            end date with format %Y-%m-%d
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing the historical treasury rates
+        """
+        for date in [start, end]:
+            if date:
+                try:
+                    datetime.strptime(date, "%Y-%m-%d")
+                except ValueError:
+                    raise ValueError(f'{date} as a wrong date format')
+        return self._request(f'{urls.HISTORICAL_TREASURY}?'
+                                 f'{urllib.parse.urlencode(self.make_params({"from": start, "to": end}))}')
+
+    def get_economic_indicators(self, source, start=None, end=None):
+        """
+        Description
+        ----
+        Return all economic indicators which are: GDP | realGDP | nominalPotentialGDP | realGDPPerCapita |
+                                                  federalFunds | CPI | inflationRate | inflation | retailSales |
+                                                  consumerSentiment | durableGoods | unemploymentRate | totalNonfarmPayroll |
+                                                  initialClaims | industrialProductionTotalIndex | newPrivatelyOwnedHousingUnitsStartedTotalUnits |
+                                                  totalVehicleSales | retailMoneyFunds | smoothedUSRecessionProbabilities | 3MonthOr90DayRatesAndYieldsCertificatesOfDeposit |
+                                                  commercialBankInterestRateOnCreditCardPlansAllAccounts | 30YearFixedRateMortgageAverage | 15YearFixedRateMortgageAverage
+
+        Input
+        ----
+        source (string)
+            name of the source.
+            Example: realGDP, federalFunds, CPI
+
+        start (string)
+            start date with format %Y-%m-%d
+
+        start (string)
+            end date with format %Y-%m-%d
+
+        Output
+        ----
+        data_dict (list)
+            Dict containing the historical treasury rates
+        """
+        for date in [start, end]:
+            if date:
+                try:
+                    datetime.strptime(date, "%Y-%m-%d")
+                except ValueError:
+                    raise ValueError(f'{date} as a wrong date format')
+        return self._request(f'{urls.ECONOMICS_INDICATOR}?'
+                                 f'{urllib.parse.urlencode(self.make_params({"name": source, "from": start, "to": end}))}')
