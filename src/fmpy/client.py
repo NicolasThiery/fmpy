@@ -172,7 +172,7 @@ class FmpClient:
         df = df.iloc[::-1]
         if datetime_index:
             df['Date'] = pd.to_datetime(df['Date'])
-        return df.set_index('Date')
+        return df.set_index('Date').drop_duplicates()
 
     def _get_historical_url(self, symbol, period, start, end):
         params = {key: val for key, val in {'from': start, 'to': end}.items() if val}
@@ -184,13 +184,14 @@ class FmpClient:
         sanitize_end = end.split(' ')[0]
         target_start_datetime = datetime.strptime(sanitize_start, '%Y-%m-%d')
         _end = sanitize_end
+        prev_data = None
         batch_data = []
         loop_index = 1
         prev_start = None
         while True:
             url = self._get_historical_url(symbol, period, sanitize_start, _end)
             data = self._request(url)
-            if not data:
+            if not data or prev_data == data:
                 return batch_data
             data_list = data if isinstance(data, list) else data['historical']
             new_start = data_list[-1]['date'].split(' ')[0]
@@ -201,11 +202,12 @@ class FmpClient:
             end_target_datetime = datetime.strptime(start, "%Y-%m-%d %H:%M:%S")
             for i, item in enumerate(data_list):
                 date = f'{item["date"]} 00:00:00' if len(item['date'].split(' ')) == 1 else item["date"]
+                date_datetime = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
                 if loop_index == 1:
                     start_target_datetime = datetime.strptime(end, "%Y-%m-%d %H:%M:%S")
-                    if datetime.strptime(date, "%Y-%m-%d %H:%M:%S") > start_target_datetime:
+                    if date_datetime > start_target_datetime:
                         start_index += 1
-                if end_target_datetime >= datetime.strptime(date, "%Y-%m-%d %H:%M:%S"):
+                if end_target_datetime > date_datetime:
                     end_index = i
                     break
                 if item['date'].split(' ')[0] == new_start:
@@ -216,6 +218,7 @@ class FmpClient:
             if new_start_datetime <= target_start_datetime:
                 break
             _end = datetime.strftime(new_start_datetime - timedelta(days=1), "%Y-%m-%d")
+            prev_data = data
             prev_start = _end
             loop_index += 1
         return batch_data
